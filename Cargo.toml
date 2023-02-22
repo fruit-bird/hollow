@@ -1,0 +1,14 @@
+[package]
+name = "moon_landing"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = "1.0.69"
+google_translator = "0.2.2"
+rand = "0.8.5"
+reqwest = { version = "0.11.14", features = ["blocking"] }
+scraper = "0.14.0"
+tokio = "1.25.0"
