@@ -1,9 +1,6 @@
-use crate::random::random_range;
-
 use anyhow::Result;
-use rand::seq::SliceRandom;
+use rand::{seq::SliceRandom, Rng};
 use scraper::{Html, Selector};
-use tokio::runtime::Builder;
 
 #[derive(Debug)]
 pub struct Prompt {
@@ -16,37 +13,30 @@ impl Prompt {
     /// Links are assumed to be valid wiki article links
     pub fn new(normal_link: &str, conspiracy_link: &str, language: &str) -> Prompt {
         Prompt {
-            normal_link: normal_link.to_owned(),
-            conspiracy_link: conspiracy_link.to_owned(),
-            second_language: language.to_owned(),
+            normal_link: normal_link.to_string(),
+            conspiracy_link: conspiracy_link.to_string(),
+            second_language: language.to_string(),
         }
     }
 
-    fn get_normal_entries(&self) -> Result<Vec<String>> {
-        let response = try_get_response(&self.normal_link)?;
+    async fn get_normal_entries(&self) -> Result<Vec<String>> {
+        let response = reqwest::get(&self.normal_link).await?.text().await?;
         let article_body = get_article_body(&response);
         Ok(article_body)
     }
 
-    fn get_conspiracy_entries(&self) -> Result<Vec<String>> {
-        let response = try_get_response(&self.conspiracy_link)?;
+    async fn get_conspiracy_entries(&self) -> Result<Vec<String>> {
+        let response = reqwest::get(&self.conspiracy_link).await?.text().await?;
         let article_body = get_article_body(&response);
         Ok(article_body)
     }
 
-    pub fn run(&self) -> Result<String> {
-        let normal_entries = self.get_normal_entries()?;
-        let conspiracy_entries = self.get_conspiracy_entries()?;
+    pub async fn run(&self) -> Result<String> {
+        let normal_entries = self.get_normal_entries().await?;
+        let conspiracy_entries = self.get_conspiracy_entries().await?;
 
-        let rt = tokio::runtime::Builder::new_current_thread()
-            .enable_all()
-            .build()?;
-        let normal_translation = rt
-            .block_on(async { translator(&normal_entries, &self.second_language).await })
-            .expect("Error while translating the entries");
-        let conspiracy_translation = rt
-            .block_on(async { translator(&conspiracy_entries, &self.second_language).await })
-            .expect("Error while translating the entries");
+        let normal_translation = translator(&normal_entries, &self.second_language).await?;
+        let conspiracy_translation = translator(&conspiracy_entries, &self.second_language).await?;
 
         let normal_mix = combine_original_and_translation(normal_entries, normal_translation);
         let conspiracy_mix =
@@ -59,13 +49,6 @@ impl Prompt {
 
         Ok(entries.join(" "))
     }
-}
-
-fn try_get_response(link: &str) -> Result<String, reqwest::Error> {
-    let response = reqwest::get(link);
-    let rt = Builder::new_current_thread().enable_all().build().unwrap();
-    let response = rt.block_on(async { response.await.unwrap().text().await });
-    response
 }
 
 fn get_article_body(response: &str) -> Vec<String> {
@@ -82,14 +65,18 @@ fn get_article_body(response: &str) -> Vec<String> {
                 false => Some(s.split(' ').take(4).map(|s| s.to_string() + " ").collect()),
             }
         })
-        .step_by(random_range(6, 21))
-        .take(random_range(30, 60))
+        .step_by(rand::thread_rng().gen_range(6..21))
+        .take(rand::thread_rng().gen_range(30..60))
         .collect();
     body_text
 }
 
+#[derive(Debug, thiserror::Error)]
+#[error("Error while fetching translation")]
+struct TranslateError;
+
 /// Returns a vector with the translations if it succeeds
-async fn translator(text_vec: &[String], language: &str) -> Result<Vec<String>, &'static str> {
+async fn translator(text_vec: &[String], language: &str) -> Result<Vec<String>, TranslateError> {
     let translation = google_translator::translate(text_vec.to_vec(), "auto", language).await;
 
     if let Ok(t) = translation {
@@ -99,7 +86,7 @@ async fn translator(text_vec: &[String], language: &str) -> Result<Vec<String>, 
             .filter(|s| !s.contains("\n"))
             .collect())
     } else {
-        Err("Error while fetching translation")
+        Err(TranslateError)
     }
 }
 

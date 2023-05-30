@@ -2,13 +2,19 @@
 use clap::Parser;
 use hollow::Prompt;
 
+const DEFAULT_NORMAL_LINK: &str = "https://en.wikipedia.org/wiki/Rumpelstiltskin";
+const DEFAULT_CONSPIRACY_LINK: &str =
+    "https://en.wikipedia.org/wiki/Moon_landing_conspiracy_theories";
+
+/// SeEk TRuth
 #[derive(Debug, Parser)]
-#[clap(author)]
-struct Args {
+struct HollowArgs {
     /// Wikipedia link to any article
+    #[arg(default_value_t = String::from(DEFAULT_NORMAL_LINK))]
     normal_link: String,
     /// Wikipedia link to a conspiracy article
-    conspiracy_link: Option<String>,
+    #[arg(default_value_t = String::from(DEFAULT_CONSPIRACY_LINK))]
+    conspiracy_link: String,
     /// Language to mix into the output
     #[arg(short, long = "lang", default_value_t = String::from("ja"))]
     language: String,
@@ -17,20 +23,12 @@ struct Args {
     // clipboard: bool,
 }
 
-const DEFAULT_CONSPIRACY_LINK: &str =
-    "https://en.wikipedia.org/wiki/Moon_landing_conspiracy_theories";
+#[tokio::main]
+async fn main() {
+    let args = HollowArgs::parse();
+    let prompt = Prompt::new(&args.normal_link, &args.conspiracy_link, &args.language);
 
-fn main() {
-    let args = Args::parse();
-    let prompt = Prompt::new(
-        &args.normal_link,
-        &args
-            .conspiracy_link
-            .unwrap_or(DEFAULT_CONSPIRACY_LINK.to_string()),
-        &args.language,
-    );
-
-    let the_spooky = match prompt.run() {
+    let the_spooky = match prompt.run().await {
         Ok(entry) => entry,
         Err(_) => std::process::exit(1),
     };
