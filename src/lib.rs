@@ -1,5 +1,5 @@
 use anyhow::Result;
-use google_translator::translate_one_line;
+use google_translator::translate;
 use rand::{seq::SliceRandom, Rng};
 use wikipedia::{http::default::Client, Wikipedia};
 
@@ -10,82 +10,107 @@ pub struct HollowPrompt {
 }
 
 impl HollowPrompt {
-    pub fn new(first_topic: &str, second_topic: &str, language: &str) -> HollowPrompt {
+    pub fn new(first_topic: String, second_topic: String, second_language: String) -> HollowPrompt {
         HollowPrompt {
-            first_topic: first_topic.to_string(),
-            second_topic: second_topic.to_string(),
-            second_language: language.to_string(),
+            first_topic,
+            second_topic,
+            second_language,
         }
     }
 
-    // change the unwraps to ? after changing the crate and adding ? support with thiserror
+    // change the unwraps to ? after changing the wikipedia crate and adding ? support with thiserror
     pub async fn run(&self) -> Result<String> {
         let wiki = Wikipedia::<Client>::default();
 
-        let content_1 = clean_article_content(
-            &wiki
-                .page_from_title((&self.first_topic).to_string())
-                .get_content()
-                .unwrap(),
-        );
-        let content_2 = clean_article_content(
-            &wiki
-                .page_from_title((&self.second_topic).to_string())
-                .get_content()
-                .unwrap(),
+        let (content_1, content_2) = self.prepare_article_content(&wiki);
+        // let (content_1, content_2) = (
+        // clean_article_content(&content_1),
+        // clean_article_content(&content_2),
+        // );
+
+        let (content_1, content_2) = (
+            content_1
+                .lines()
+                .map(ToString::to_string)
+                .collect::<Vec<String>>(),
+            content_2
+                .lines()
+                .map(ToString::to_string)
+                .collect::<Vec<String>>(),
         );
 
-        // let normal_translation = translator(&content_1, &self.second_language).await?;
-        // let conspiracy_translation = translator(&content_2, &self.second_language).await?;
-        let first_translation =
-            translate_one_line(content_1.clone(), "auto", &self.second_language).await?;
-        let second_translation =
-            translate_one_line(content_2.clone(), "auto", &self.second_language).await?;
+        let (c1, c2) = (content_1.clone(), content_2.clone());
 
-        let first_mix = combine_original_and_translation(&content_1, &first_translation);
-        let conspiracy_mix = combine_original_and_translation(&content_2, &second_translation);
+        let translation_1 = translate(c1, "auto", &self.second_language)
+            .await?
+            .output_text;
+        let translation_2 = translate(c2, "auto", &self.second_language)
+            .await?
+            .output_text;
+
+        let mix_1 = combine_original_and_translation(&content_1, &translation_1[0]);
+        let mix_2 = combine_original_and_translation(&content_2, &translation_2[0]);
 
         let mut entries = vec![];
-        entries.extend(first_mix.lines());
-        entries.extend(conspiracy_mix.lines());
+        entries.extend(mix_1);
+        entries.extend(mix_2);
         entries.shuffle(&mut rand::thread_rng());
 
         Ok(entries.join(" "))
+        // Ok(content_1.join("\n"))
+    }
+
+    /// Divides article body into a string with many lines
+    fn prepare_article_content(&self, wiki: &Wikipedia<Client>) -> (String, String) {
+        let content_1 = wiki
+            .page_from_title(self.first_topic.to_string())
+            .get_content()
+            .unwrap()
+            .replace(".", ",")
+            .split(",")
+            .map(|s| s.trim().to_string() + "\n")
+            .collect();
+
+        let content_2 = wiki
+            .page_from_title(self.second_topic.to_string())
+            .get_content()
+            .unwrap()
+            .replace(".", ",")
+            .split(",")
+            .map(|s| s.trim().to_string() + "\n")
+            .collect();
+
+        (content_1, content_2)
     }
 }
 
-fn clean_article_content(content: &str) -> String {
+fn clean_article_content(content: &str) -> Vec<String> {
     content
-        .split('\n')
-        .filter_map(|s| {
-            match s.len() < 65
-                || s.contains("\n")
-                || s.contains("\u{a0}")
-                || s.contains("[")
-                || s.contains("]")
-            {
-                true => None,
-                false => Some(
-                    s.split(' ')
-                        .take(4)
-                        .map(|s| s.to_string() + " ")
-                        .collect::<String>(),
-                ),
-            }
+        .lines()
+        .filter_map(|s| match /* s.len() > 100 || */  s.contains("==") {
+            true => None,
+            false => Some(
+                s.split(' ')
+                    .take(4)
+                    .map(|s| s.to_string() + " ")
+                    .collect::<String>(),
+            ),
         })
-        .step_by(rand::thread_rng().gen_range(6..21))
-        .take(rand::thread_rng().gen_range(30..60))
+        // .step_by(rand::thread_rng().gen_range(6..10)) // 6..21
+        // .take(rand::thread_rng().gen_range(30..60)) // 30..60
         .collect()
 }
 
-fn combine_original_and_translation(entries: &str, translations: &str) -> String {
+fn combine_original_and_translation(
+    entries: &Vec<String>,
+    translations: &Vec<String>,
+) -> Vec<String> {
     entries
-        .to_string()
-        .lines()
-        .zip(translations.to_string().lines())
-        .fold(String::new(), |mut acc, (n, t)| {
-            acc.push_str(n);
-            acc.push_str(t);
+        .iter()
+        .zip(translations)
+        .fold(vec![], |mut acc, (n, t)| {
+            acc.push(n.clone());
+            acc.push(t.clone());
             acc
         })
 }

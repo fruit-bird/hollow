@@ -5,10 +5,10 @@ use hollow::HollowPrompt;
 /// SeEk TRuth
 #[derive(Debug, Parser)]
 struct HollowArgs {
-    /// Wikipedia link to any article
+    /// Topic name to any Wikipedia article
     #[arg(default_value_t = String::from("Rumpelstiltskin"))]
     first_topic: String,
-    /// Wikipedia link to a conspiracy article
+    /// Topic name to any Wikipedia article
     #[arg(default_value_t = String::from("Moon landing conspiracy"))]
     second_topic: String,
     /// Language to mix into the output
@@ -23,11 +23,14 @@ struct HollowArgs {
 #[tokio::main]
 async fn main() {
     let args = HollowArgs::parse();
-    let prompt = HollowPrompt::new(&args.first_topic, &args.second_topic, &args.second_language);
+    let prompt = HollowPrompt::new(args.first_topic, args.second_topic, args.second_language);
 
     let the_spooky = match prompt.run().await {
         Ok(entry) => entry,
-        Err(_) => std::process::exit(1),
+        Err(e) => {
+            eprintln!("Error while seeking truth: {}", e);
+            std::process::exit(1)
+        }
     };
 
     println!("{}", the_spooky);
