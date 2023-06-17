@@ -1,18 +1,19 @@
 // use arboard::Clipboard;
 use clap::Parser;
-use hollow::Prompt;
+use hollow::Hollow;
 
-/// SeEk TRuth
+/// SeEk TruTh
 #[derive(Debug, Parser)]
-struct HollowArgs {
-    /// Wikipedia link to any article
-    #[arg(default_value_t = String::from("Rumpelstiltskin"))]
-    first_topic: String,
-    /// Wikipedia link to a conspiracy article
-    #[arg(default_value_t = String::from("Moon landing conspiracy"))]
-    second_topic: String,
+#[clap(version)]
+struct HollowCLI {
+    /// Wikipedia topic/link to any article
+    #[arg(default_value = "Rumpelstiltskin")]
+    first_link: String,
+    /// Wikipedia topic/link to another article
+    #[arg(default_value = "Moon landing conspiracies")]
+    second_link: String,
     /// Language to mix into the output
-    #[arg(short, long = "lang", default_value_t = String::from("ja"))]
+    #[arg(short = 'l', long = "lang", default_value = "ja")]
     second_language: String,
     // /// Copy the output to the clipboard
     // #[arg(short, long)]
@@ -21,12 +22,15 @@ struct HollowArgs {
 
 #[tokio::main]
 async fn main() {
-    let args = HollowArgs::parse();
-    let prompt = Prompt::new(&args.first_topic, &args.second_topic, &args.second_language);
+    let args = HollowCLI::parse();
+    let prompt = Hollow::new(&args.first_link, &args.second_link, &args.second_language);
 
     let the_spooky = match prompt.run().await {
         Ok(entry) => entry,
-        Err(_) => std::process::exit(1),
+        Err(e) => {
+            eprintln!("{}", e);
+            std::process::exit(1)
+        }
     };
 
     println!("{}", the_spooky);

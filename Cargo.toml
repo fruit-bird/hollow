@@ -1,18 +1,18 @@
 [package]
 name = "hollow"
-version = "0.2.0"
+version = "0.2.3"
 edition = "2021"
 authors = ["fruit-bird"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-anyhow = "1.0.69"
+anyhow = "1.0.71"
 # arboard = "3.2.0"
-clap = { version = "4.1.6", features = ["derive"] }
-google_translator = { git = "https://github.com/fruit-bird/Eveheeero-Translate/" }
+clap = { version = "4.3.4", features = ["derive"] }
+# google_translator = "0.2.3" # doesn't work, might be cause latest update didn't bump version
+google_translator = { git = "https://github.com/Eveheeero/Eveheeero" }
 rand = "0.8.5"
-reqwest = "0.11.14"
-thiserror = "1.0.40"
-tokio = { version = "1.25.0", features = ["full"] }
-wikipedia = "0.3.4"
+reqwest = "0.11.18"
+scraper = "0.16.0"
+tokio = { version = "1.28.2", features = ["full"] }
