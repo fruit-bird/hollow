@@ -5,12 +5,12 @@ use hollow::Hollow;
 /// SeEk TruTh
 #[derive(Debug, Parser)]
 struct HollowArgs {
-    /// Wikipedia link to any article
-    #[arg(default_value_t = String::from("https://en.wikipedia.org/wiki/Rumpelstiltskin"))]
-    normal_link: String,
-    /// Wikipedia link to a conspiracy article
-    #[arg(default_value_t = String::from("https://en.wikipedia.org/wiki/Moon_landing_conspiracy_theories"))]
-    conspiracy_link: String,
+    /// Wikipedia topic/link to any article
+    #[arg(default_value_t = String::from("Rumpelstiltskin"))]
+    first_link: String,
+    /// Wikipedia topic/link to another article
+    #[arg(default_value_t = String::from("Moon landing conspiracies"))]
+    second_link: String,
     /// Language to mix into the output
     #[arg(short = 'l', long = "lang", default_value_t = String::from("ja"))]
     second_language: String,
@@ -22,7 +22,7 @@ struct HollowArgs {
 #[tokio::main]
 async fn main() {
     let args = HollowArgs::parse();
-    let prompt = Hollow::new(args.normal_link, args.conspiracy_link, args.second_language);
+    let prompt = Hollow::new(&args.first_link, &args.second_link, &args.second_language);
 
     let the_spooky = match prompt.run().await {
         Ok(entry) => entry,
