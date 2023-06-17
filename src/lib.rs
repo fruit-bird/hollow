@@ -2,24 +2,36 @@ use anyhow::Result;
 use rand::{seq::SliceRandom, Rng};
 use scraper::{Html, Selector};
 
+const WIKI_URL: &str = "https://en.wikipedia.org/wiki/";
+
 #[derive(Debug)]
-pub struct Hollow {
-    normal_link: String,
-    conspiracy_link: String,
-    second_language: String,
+pub struct Hollow<'a> {
+    first_link: &'a str,
+    second_link: &'a str,
+    second_language: &'a str,
 }
 
-impl Hollow {
-    pub fn new(normal_link: String, conspiracy_link: String, second_language: String) -> Hollow {
-        Hollow {
-            normal_link,
-            conspiracy_link,
+impl<'a> Hollow<'a> {
+    pub fn new(first_link: &'a str, second_link: &'a str, second_language: &'a str) -> Self {
+        Self {
+            first_link,
+            second_link,
             second_language,
         }
     }
 
     async fn get_normal_entries(&self) -> Result<Vec<String>> {
-        let response = reqwest::get(&self.normal_link).await?.text().await?;
+        let response = if self.first_link.starts_with(WIKI_URL) {
+            reqwest::get(self.first_link).await?.text().await?
+        } else {
+            reqwest::get(format!(
+                "https://en.wikipedia.org/wiki/{}",
+                &self.first_link
+            ))
+            .await?
+            .text()
+            .await?
+        };
 
         let document = Html::parse_document(&response);
         let content_selector = Selector::parse("#mw-content-text").unwrap();
@@ -44,7 +56,18 @@ impl Hollow {
     }
 
     async fn get_conspiracy_entries(&self) -> Result<Vec<String>> {
-        let response = reqwest::get(&self.conspiracy_link).await?.text().await?;
+        let response = if self.second_link.starts_with(WIKI_URL) {
+            reqwest::get(self.second_link).await?.text().await?
+        } else {
+            // in case the input is a topic rather than a link
+            reqwest::get(format!(
+                "https://en.wikipedia.org/wiki/{}",
+                &self.second_link
+            ))
+            .await?
+            .text()
+            .await?
+        };
 
         let document = Html::parse_document(&response);
         let content_selector = Selector::parse("#mw-content-text").unwrap();
@@ -63,7 +86,6 @@ impl Hollow {
             })
             .step_by(rng.gen_range(5..21))
             .take(rng.gen_range(30..60))
-            // .map(ToString::to_string)
             .collect();
 
         Ok(vec_text)
@@ -75,7 +97,7 @@ impl Hollow {
         conspiracy_entries: &[String],
     ) -> Result<(Vec<String>, Vec<String>)> {
         let normal_translation =
-            google_translator::translate(normal_entries, "auto", &self.second_language)
+            google_translator::translate(normal_entries, "auto", self.second_language)
                 .await?
                 .output_text
                 .iter()
@@ -85,7 +107,7 @@ impl Hollow {
                 .collect();
 
         let conspiracy_translation =
-            google_translator::translate(conspiracy_entries, "auto", &self.second_language)
+            google_translator::translate(conspiracy_entries, "auto", self.second_language)
                 .await?
                 .output_text
                 .iter()
