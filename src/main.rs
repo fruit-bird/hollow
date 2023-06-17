@@ -4,15 +4,16 @@ use hollow::Hollow;
 
 /// SeEk TruTh
 #[derive(Debug, Parser)]
-struct HollowArgs {
+#[clap(version)]
+struct HollowCLI {
     /// Wikipedia topic/link to any article
-    #[arg(default_value_t = String::from("Rumpelstiltskin"))]
+    #[arg(default_value = "Rumpelstiltskin")]
     first_link: String,
     /// Wikipedia topic/link to another article
-    #[arg(default_value_t = String::from("Moon landing conspiracies"))]
+    #[arg(default_value = "Moon landing conspiracies")]
     second_link: String,
     /// Language to mix into the output
-    #[arg(short = 'l', long = "lang", default_value_t = String::from("ja"))]
+    #[arg(short = 'l', long = "lang", default_value = "ja")]
     second_language: String,
     // /// Copy the output to the clipboard
     // #[arg(short, long)]
@@ -21,7 +22,7 @@ struct HollowArgs {
 
 #[tokio::main]
 async fn main() {
-    let args = HollowArgs::parse();
+    let args = HollowCLI::parse();
     let prompt = Hollow::new(&args.first_link, &args.second_link, &args.second_language);
 
     let the_spooky = match prompt.run().await {
