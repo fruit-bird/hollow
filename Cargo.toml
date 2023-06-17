@@ -1,6 +1,6 @@
 [package]
 name = "hollow"
-version = "0.2.1"
+version = "0.2.3"
 edition = "2021"
 authors = ["fruit-bird"]
 
@@ -9,7 +9,7 @@ authors = ["fruit-bird"]
 [dependencies]
 anyhow = "1.0.71"
 # arboard = "3.2.0"
-clap = { version = "4.3.3", features = ["derive"] }
+clap = { version = "4.3.4", features = ["derive"] }
 # google_translator = "0.2.3" # doesn't work, might be cause latest update didn't bump version
 google_translator = { git = "https://github.com/Eveheeero/Eveheeero" }
 rand = "0.8.5"
