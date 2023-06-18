@@ -89,7 +89,7 @@ async fn get_entries(query: &str) -> Result<Vec<String>> {
                     s.split(' ')
                         .skip(2) // most first words are the/on...
                         .step_by(rand::thread_rng().gen_range(2..6))
-                        .take(4) // 4 or 5 seems to be the spot
+                        .take(6) // 4 or 5 seems to be the spot
                         .map(|s| s.to_string() + " ")
                         .collect(),
                 ),
@@ -98,7 +98,6 @@ async fn get_entries(query: &str) -> Result<Vec<String>> {
         .step_by(rand::thread_rng().gen_range(2..4)) // 5..21
         .take(rand::thread_rng().gen_range(30..60)) // 30..60
         .collect();
-    dbg!(&vec_text);
 
     Ok(vec_text)
 }
