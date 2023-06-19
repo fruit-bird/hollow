@@ -79,7 +79,7 @@ async fn get_wiki_article(query: &str) -> Result<String> {
 async fn get_entries(query: &str) -> Result<Vec<String>> {
     let article_text = get_wiki_article(query).await?;
 
-    let vec_text: Vec<String> = article_text
+    let vec_text = article_text
         .lines()
         .filter(|s| s.len() > 5)
         .filter_map(
@@ -90,8 +90,8 @@ async fn get_entries(query: &str) -> Result<Vec<String>> {
                         .skip(2) // most first words are the/on...
                         .step_by(rand::thread_rng().gen_range(2..6))
                         .take(6) // 4 or 5 seems to be the spot
-                        .map(|s| s.to_string() + " ")
-                        .collect(),
+                        .collect::<Vec<&str>>()
+                        .join(" "),
                 ),
             },
         )
